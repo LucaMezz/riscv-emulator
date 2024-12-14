@@ -226,8 +226,10 @@ pub enum Instruction {
     /**
      * Environment
      */
-    ECALL(UTypeParams),
-    EBREAK(UTypeParams),
+    ECALL(ITypeParams),
+    EBREAK(ITypeParams),
+
+    // 0000000 00100 010 01000 01000 0010011
 }
 
 lazy_static! {
@@ -425,6 +427,19 @@ lazy_static! {
             funct3: 0x7, 
             from: |i| Instruction::BGEU(BTypeParams::from(i)) 
         },
+
+        InstructionFormat::IType { 
+            opcode: 0b1110011, 
+            funct3: 0x0, 
+            funct7: None, 
+            from: |i| Instruction::ECALL(ITypeParams::from(i, false)) 
+        },
+        InstructionFormat::IType { 
+            opcode: 0b1110011, 
+            funct3: 0x0, 
+            funct7: None, 
+            from: |i| Instruction::EBREAK(ITypeParams::from(i, false)) 
+        }
     ];
 }
 
