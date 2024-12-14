@@ -197,6 +197,17 @@ pub enum Instruction {
     SRA(RTypeParams),
     SLT(RTypeParams),
     SLTU(RTypeParams),
+    /**
+     * Muleiplication extension
+     */
+    MUL(RTypeParams),
+    MULH(RTypeParams),
+    MULSU(RTypeParams),
+    MULU(RTypeParams),
+    DIV(RTypeParams),
+    DIVU(RTypeParams),
+    REM(RTypeParams),
+    REMU(RTypeParams),
 
     /**
      * Binary Operations with an Immediate operand
@@ -269,6 +280,15 @@ lazy_static! {
         r_instruction!(SLT,  0b0110011, 0x2, 0x00),
         r_instruction!(SLTU, 0b0110011, 0x3, 0x00),
 
+        r_instruction!(MUL,   0b0110011, 0x0, 0x01),
+        r_instruction!(MULH,  0b0110011, 0x1, 0x01),
+        r_instruction!(MULSU, 0b0110011, 0x2, 0x01),
+        r_instruction!(MULU,  0b0110011, 0x3, 0x01),
+        r_instruction!(DIV,   0b0110011, 0x4, 0x01),
+        r_instruction!(DIVU,  0b0110011, 0x5, 0x01),
+        r_instruction!(REM,   0b0110011, 0x6, 0x01),
+        r_instruction!(REMU,  0b0110011, 0x7, 0x01),
+
         i_instruction!(ADDI,  0b0010011, 0x0, None),
         i_instruction!(XORI,  0b0010011, 0x4, None),
         i_instruction!(ORI,   0b0010011, 0x6, None),
@@ -336,6 +356,8 @@ impl Instruction {
     }
 }
 
+
+
 pub struct CPU {
     xpsr: u64,
     registers: [u64; 32],
@@ -375,9 +397,7 @@ impl CPU {
     }
 
     fn decode_inst(&self, inst: u32) -> Instruction {
-        Instruction::decode(inst);
-
-        Instruction::UNDEF
+        Instruction::decode(inst)
     }
 
     fn exec_isnt(&mut self, inst: u32) {
