@@ -2,13 +2,39 @@
 
 use std::collections::HashMap;
 
+use derive_new::new;
 use lazy_static::lazy_static;
+
+macro_rules! i_instruction {
+    ($name:ident, $opcode:expr, $funct3:expr, $funct7:expr) => {
+        InstructionFormat::new_i_type($opcode, $funct3, $funct7, |i| Instruction::$name(ITypeParams::from(i, true)))
+    };
+}
+
+macro_rules! r_instruction {
+    ($name:ident, $opcode:expr, $funct3:expr, $funct7:expr) => {
+        InstructionFormat::new_r_type($opcode, $funct3, $funct7, |i| Instruction::$name(RTypeParams::from(i)))
+    };
+}
+
+macro_rules! s_instruction {
+    ($name:ident, $opcode:expr, $funct3:expr) => {
+        InstructionFormat::new_s_type($opcode, $funct3, |i| Instruction::$name(STypeParams::from(i)))
+    };
+}
+
+macro_rules! b_instruction {
+    ($name:ident, $opcode:expr, $funct3:expr) => {
+        InstructionFormat::new_b_type($opcode, $funct3, |i| Instruction::$name(BTypeParams::from(i)))
+    };
+}
 
 fn get_bits(n: u32, start: u32, end: u32) -> u32 {
     let mask = (1 << (end - start + 1)) - 1;
     (n >> start) & mask
 }
 
+#[derive(new)]
 enum InstructionFormat {
     RType {
         opcode: u32,
@@ -228,218 +254,50 @@ pub enum Instruction {
      */
     ECALL(ITypeParams),
     EBREAK(ITypeParams),
-
-    // 0000000 00100 010 01000 01000 0010011
 }
 
 lazy_static! {
     static ref patterns: Vec<InstructionFormat> = vec![
-        InstructionFormat::RType {
-            opcode: 0b0110011,
-            funct3: 0x0,
-            funct7: 0x00,
-            from: |i| Instruction::ADD(RTypeParams::from(i)) 
-        },
-        InstructionFormat::RType { 
-            opcode: 0b0110011, 
-            funct3: 0x0, 
-            funct7: 0x20, 
-            from: |i| Instruction::SUB(RTypeParams::from(i)) 
-        },
-        InstructionFormat::RType {
-            opcode: 0b0110011, 
-            funct3: 0x4, 
-            funct7: 0x00, 
-            from: |i| Instruction::XOR(RTypeParams::from(i))
-        },
-        InstructionFormat::RType { 
-            opcode: 0b0110011, 
-            funct3: 0x6, 
-            funct7: 0x00, 
-            from: |i| Instruction::OR(RTypeParams::from(i)) 
-        },
-        InstructionFormat::RType { 
-            opcode: 0b0110011, 
-            funct3: 0x7, 
-            funct7: 0x00, 
-            from: |i| Instruction::AND(RTypeParams::from(i)) 
-        },
-        InstructionFormat::RType { 
-            opcode: 0b0110011,
-            funct3: 0x1,
-            funct7: 0x00,
-            from: |i| Instruction::SLL(RTypeParams::from(i))
-        },
-        InstructionFormat::RType { 
-            opcode: 0b0110011, 
-            funct3: 0x5,
-            funct7: 0x00,
-            from: |i| Instruction::SRL(RTypeParams::from(i))
-        },
-        InstructionFormat::RType { 
-            opcode: 0b0110011, 
-            funct3: 0x5, 
-            funct7: 0x20, 
-            from: |i| Instruction::SRA(RTypeParams::from(i)) 
-        },
-        InstructionFormat::RType { 
-            opcode: 0b0110011, 
-            funct3: 0x2, 
-            funct7: 0x00, 
-            from: |i| Instruction::SLT(RTypeParams::from(i))
-        },
-        InstructionFormat::RType { 
-            opcode: 0b0110011, 
-            funct3: 0x3, 
-            funct7: 0x00, 
-            from: |i| Instruction::SLTU(RTypeParams::from(i)) 
-        },
+        r_instruction!(ADD,  0b0110011, 0x0, 0x00),
+        r_instruction!(SUB,  0b0110011, 0x0, 0x20),
+        r_instruction!(XOR,  0b0110011, 0x4, 0x00),
+        r_instruction!(OR,   0b0110011, 0x6, 0x00),
+        r_instruction!(AND,  0b0110011, 0x7, 0x00),
+        r_instruction!(SLL,  0b0110011, 0x1, 0x00),
+        r_instruction!(SRL,  0b0110011, 0x5, 0x00),
+        r_instruction!(SRA,  0b0110011, 0x5, 0x20),
+        r_instruction!(SLT,  0b0110011, 0x2, 0x00),
+        r_instruction!(SLTU, 0b0110011, 0x3, 0x00),
 
-        InstructionFormat::IType {
-            opcode: 0b0010011,
-            funct3: 0x0,
-            funct7: None,
-            from: |i| Instruction::ADDI(ITypeParams::from(i, false)) 
-        },
-        InstructionFormat::IType {
-            opcode: 0b0010011, 
-            funct3: 0x4, 
-            funct7: None,
-            from: |i| Instruction::XORI(ITypeParams::from(i, false))
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0010011, 
-            funct3: 0x6, 
-            funct7: None,
-            from: |i| Instruction::ORI(ITypeParams::from(i, false)) 
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0010011, 
-            funct3: 0x7, 
-            funct7: None,
-            from: |i| Instruction::ANDI(ITypeParams::from(i, false)) 
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0010011,
-            funct3: 0x1,
-            funct7: Some(0x00),
-            from: |i| Instruction::SLLI(ITypeParams::from(i, true))
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0010011, 
-            funct3: 0x5,
-            funct7: Some(0x00),
-            from: |i| Instruction::SRLI(ITypeParams::from(i, true))
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0010011, 
-            funct3: 0x5, 
-            funct7: Some(0x20),
-            from: |i| Instruction::SRAI(ITypeParams::from(i, true)) 
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0010011, 
-            funct3: 0x2, 
-            funct7: None,
-            from: |i| Instruction::SLTI(ITypeParams::from(i, false))
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0010011, 
-            funct3: 0x3, 
-            funct7: None,
-            from: |i| Instruction::SLTIU(ITypeParams::from(i, false)) 
-        },
+        i_instruction!(ADDI,  0b0010011, 0x0, None),
+        i_instruction!(XORI,  0b0010011, 0x4, None),
+        i_instruction!(ORI,   0b0010011, 0x6, None),
+        i_instruction!(ANDI,  0b0010011, 0x7, None),
+        i_instruction!(SLLI,  0b0010011, 0x1, Some(0x00)),
+        i_instruction!(SRLI,  0b0010011, 0x5, Some(0x00)),
+        i_instruction!(SRAI,  0b0010011, 0x5, Some(0x20)),
+        i_instruction!(SLTI,  0b0010011, 0x2, None),
+        i_instruction!(SLTIU, 0b0010011, 0x3, None),
 
-        InstructionFormat::IType { 
-            opcode: 0b0000011, 
-            funct3: 0x0, 
-            funct7: None, 
-            from: |i| Instruction::LB(ITypeParams::from(i, false)) 
-        },
-        InstructionFormat::IType {
-            opcode: 0b0000011, 
-            funct3: 0x1, 
-            funct7: None, 
-            from: |i| Instruction::LH(ITypeParams::from(i, false)) 
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0000011, 
-            funct3: 0x2, 
-            funct7: None, 
-            from: |i| Instruction::LW(ITypeParams::from(i, false))
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0000011, 
-            funct3: 0x4, 
-            funct7: None, 
-            from: |i| Instruction::LBU(ITypeParams::from(i, false)) 
-        },
-        InstructionFormat::IType { 
-            opcode: 0b0000011, 
-            funct3: 0x5, 
-            funct7: None, 
-            from: |i| Instruction::LHU(ITypeParams::from(i, false)) 
-        },
+        i_instruction!(LB,  0b0000011, 0x0, None),
+        i_instruction!(LH,  0b0000011, 0x1, None),
+        i_instruction!(LW,  0b0000011, 0x2, None),
+        i_instruction!(LBU, 0b0000011, 0x4, None),
+        i_instruction!(LHU, 0b0000011, 0x5, None),
 
-        InstructionFormat::SType { 
-            opcode: 0b0100011, 
-            funct3: 0x0, 
-            from: |i| Instruction::SB(STypeParams::from(i))
-        }, 
-        InstructionFormat::SType { 
-            opcode: 0b0100011, 
-            funct3: 0x1, 
-            from: |i| Instruction::SH(STypeParams::from(i))
-        }, 
-        InstructionFormat::SType { 
-            opcode: 0b0100011, 
-            funct3: 0x2, 
-            from: |i| Instruction::SW(STypeParams::from(i))
-        }, 
-        
-        InstructionFormat::BType { 
-            opcode: 0b1100011, 
-            funct3: 0x0, 
-            from: |i| Instruction::BEQ(BTypeParams::from(i)) 
-        },
-        InstructionFormat::BType { 
-            opcode: 0b1100011, 
-            funct3: 0x1, 
-            from: |i| Instruction::BNE(BTypeParams::from(i)) 
-        },
-        InstructionFormat::BType { 
-            opcode: 0b1100011, 
-            funct3: 0x4, 
-            from: |i| Instruction::BLT(BTypeParams::from(i)) 
-        },
-        InstructionFormat::BType { 
-            opcode: 0b1100011, 
-            funct3: 0x5, 
-            from: |i| Instruction::BGE(BTypeParams::from(i)) 
-        },
-        InstructionFormat::BType { 
-            opcode: 0b1100011, 
-            funct3: 0x6, 
-            from: |i| Instruction::BLTU(BTypeParams::from(i)) 
-        },
-        InstructionFormat::BType { 
-            opcode: 0b1100011, 
-            funct3: 0x7, 
-            from: |i| Instruction::BGEU(BTypeParams::from(i)) 
-        },
+        s_instruction!(SB, 0b0100011, 0x0),
+        s_instruction!(SH, 0b0100011, 0x1),
+        s_instruction!(SW, 0b0100011, 0x2),
 
-        InstructionFormat::IType { 
-            opcode: 0b1110011, 
-            funct3: 0x0, 
-            funct7: None, 
-            from: |i| Instruction::ECALL(ITypeParams::from(i, false)) 
-        },
-        InstructionFormat::IType { 
-            opcode: 0b1110011, 
-            funct3: 0x0, 
-            funct7: None, 
-            from: |i| Instruction::EBREAK(ITypeParams::from(i, false)) 
-        }
+        b_instruction!(BEQ,  0b1100011, 0x0),
+        b_instruction!(BNE,  0b1100011, 0x1),
+        b_instruction!(BLT,  0b1100011, 0x4),
+        b_instruction!(BGE,  0b1100011, 0x5),
+        b_instruction!(BLTU, 0b1100011, 0x6),
+        b_instruction!(BGEU, 0b1100011, 0x7),
+
+        i_instruction!(ECALL,  0b1110011, 0x0, None),
+        i_instruction!(EBREAK, 0b1110011, 0x0, None)
     ];
 }
 
