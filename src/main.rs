@@ -1,13 +1,10 @@
-use cpu::{Instruction, CPU};
+use cpu::CPU;
 
 pub mod test;
 pub mod cpu;
 
 fn main() {
-    let inst = Instruction::decode(0b00000000000000000000011110110011);
-    println!("Decoded: {:#?}", inst);
-
-    let mut cpu = CPU::new();
+    let mut cpu = CPU::new(512);
 
     cpu.run();
 }

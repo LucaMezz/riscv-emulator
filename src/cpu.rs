@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-
 use derive_new::new;
 use lazy_static::lazy_static;
 
@@ -26,6 +24,18 @@ macro_rules! s_instruction {
 macro_rules! b_instruction {
     ($name:ident, $opcode:expr, $funct3:expr) => {
         InstructionFormat::new_b_type($opcode, $funct3, |i| Instruction::$name(BTypeParams::from(i)))
+    };
+}
+
+macro_rules! j_instruction {
+    ($name:ident, $opcode:expr) => {
+        InstructionFormat::new_j_type($opcode, |i| Instruction::$name(JTypeParams::from(i)))
+    };
+}
+
+macro_rules! u_instruction {
+    ($name:ident, $opcode:expr) => {
+        InstructionFormat::new_u_type($opcode, |i| Instruction::$name(UTypeParams::from(i)))
     };
 }
 
@@ -316,6 +326,12 @@ lazy_static! {
         b_instruction!(BLTU, 0b1100011, 0x6),
         b_instruction!(BGEU, 0b1100011, 0x7),
 
+        j_instruction!(JAL,  0b1101111),
+        i_instruction!(JALR, 0b1100111, 0x0, None),
+
+        u_instruction!(LUI,   0b0110111),
+        u_instruction!(AUIPC, 0b0010111),
+
         i_instruction!(ECALL,  0b1110011, 0x0, None),
         i_instruction!(EBREAK, 0b1110011, 0x0, None)
     ];
@@ -348,7 +364,12 @@ impl Instruction {
                         return from(inst);
                     }
                 }
-                _ => unimplemented!()
+                InstructionFormat::JType { opcode, from } |
+                InstructionFormat::UType { opcode, from } => {
+                    if *opcode == inst_opcode {
+                        return from(inst);
+                    }
+                }
             }
         }
 
@@ -356,62 +377,97 @@ impl Instruction {
     }
 }
 
+pub struct DRAM {
+    size: usize,
+    mem: Vec<u8>,
+}
 
+impl DRAM {
+    pub fn new(size: usize) -> Self {
+        assert!(size % 4 == 0);
+        assert!(size > 0);
+
+        DRAM {
+            size,
+            mem: vec![0; size]
+        }
+    }
+
+    fn read(&self, base: usize, size: usize) -> u64 {
+        unimplemented!()
+    }
+
+    fn write(&self, base: usize, size: usize, data: u64) {
+        unimplemented!()
+    }
+
+    pub fn fetch(&self, pc: u64) -> u64 {
+        self.read(pc as usize, 4)
+    }
+
+    pub fn read_word(&self, addr: u64) -> u64 {
+        self.read(addr as usize, 4)
+    }
+
+    pub fn read_half_word(&self, addr: u64) -> u64 {
+        self.read(addr as usize, 2)
+    }
+
+    pub fn read_byte(&self, addr: u64) -> u64 {
+        self.read(addr as usize, 1)
+    }
+
+    pub fn write_word(&mut self, addr: u64, data: u64) {
+        self.write(addr as usize, 4, data)
+    }
+
+    pub fn write_half_word(&mut self, addr: u64, data: u64) {
+        self.write(addr as usize, 2, data as u64)
+    }
+
+    pub fn write_byte(&mut self, addr: u64, data: u64) {
+        self.write(addr as usize, 1, data as u64)
+    }
+}
+
+pub struct RegisterFile {
+    regs: Vec<u64>
+}
+
+impl RegisterFile {
+    pub fn new() -> Self {
+        RegisterFile { 
+            regs: vec![0; 31] 
+        }
+    }
+
+    pub fn write(&mut self, num: u8, data: u64) {
+        assert!(num < 32);
+        self.regs[num as usize] = data;
+    }
+
+    pub fn read(&self, num: u8) -> u64 {
+        if num == 0 {
+            0
+        } else {
+            self.regs[num as usize]
+        }
+    }
+}
 
 pub struct CPU {
-    xpsr: u64,
-    registers: [u64; 32],
-    memory: HashMap<u64, u8>
+    registers: RegisterFile,
+    memory: DRAM,
 }
 
 impl CPU {
-    pub fn new() -> Self {
-        CPU { xpsr: 0, registers: [0; 32], memory: HashMap::new() }
-    }
-
-    fn mem_read(&self, addr: u64) -> u8 {
-        let data = self.memory.get(&addr);
-        *data.unwrap_or(&0)
-    }
-
-    fn mem_read_bytes(&self, addr: u64, count: u64) -> Vec<u8> {
-        (0..count)
-            .map(|i| self.mem_read(addr + i))
-            .collect()
-    }
-
-    fn mem_write(&mut self, addr: u64, data: u8) {
-        self.memory.insert(addr, data);
-    }
-
-    fn read_pc(&self) -> u64 {
-        self.registers[15]
-    }
-
-    fn set_pc(&mut self, value: u64) {
-        self.registers[15] = value;
-    }
-
-    fn inc_pc(&mut self) {
-        self.registers[15] += 1;
-    }
-
-    fn decode_inst(&self, inst: u32) -> Instruction {
-        Instruction::decode(inst)
-    }
-
-    fn exec_isnt(&mut self, inst: u32) {
-        let _decoded_inst = self.decode_inst(inst);
+    pub fn new(memory: usize) -> Self {
+        CPU { registers: RegisterFile::new(), memory: DRAM::new(memory) }
     }
 
     pub fn run(&mut self) {
         loop {
-            let pc = self.read_pc();
-            let inst_bytes = self.mem_read_bytes(pc, 4);
-            let inst: u32 = u32::from_le_bytes(inst_bytes.try_into().unwrap());
-            self.inc_pc();
-
-            self.exec_isnt(inst);
+            
         }
     }
 }
