@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 
-use crate::cpu::{BTypeParams, ITypeParams, Instruction, RTypeParams, STypeParams};
+use crate::isa::{format::{BTypeParams, ITypeParams, RTypeParams, STypeParams}, Instruction};
 
 #[test]
 pub fn it_decodes_add_and_sub_correctly() {

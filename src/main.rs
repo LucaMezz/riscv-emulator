@@ -1,7 +1,9 @@
-use cpu::CPU;
+use components::CPU;
 
 pub mod test;
-pub mod cpu;
+pub mod util;
+pub mod components;
+pub mod isa;
 
 fn main() {
     let mut cpu = CPU::new(512);
