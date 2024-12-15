@@ -3,10 +3,11 @@ use lazy_static::lazy_static;
 
 use crate::util::get_bits;
 
-use super::instruction::Instruction::{self, *};
+use super::Instruction::{self, *};
 
 lazy_static! {
     pub static ref INSTRUCTION_PATTERNS: Vec<InstructionFormat> = vec![
+        // RV32I Base Instruction Set
         InstructionFormat::new_r_type(0b0110011, 0x0, 0x00, ADD),
         InstructionFormat::new_r_type(0b0110011, 0x0, 0x20, SUB),
         InstructionFormat::new_r_type(0b0110011, 0x4, 0x00, XOR),
@@ -18,30 +19,21 @@ lazy_static! {
         InstructionFormat::new_r_type(0b0110011, 0x2, 0x00, SLT),
         InstructionFormat::new_r_type(0b0110011, 0x3, 0x00, SLTU),
 
-        InstructionFormat::new_r_type(0b0110011, 0x0, 0x01, MUL),
-        InstructionFormat::new_r_type(0b0110011, 0x1, 0x01, MULH),
-        InstructionFormat::new_r_type(0b0110011, 0x2, 0x01, MULSU),
-        InstructionFormat::new_r_type(0b0110011, 0x3, 0x01, MULU),
-        InstructionFormat::new_r_type(0b0110011, 0x4, 0x01, DIV),
-        InstructionFormat::new_r_type(0b0110011, 0x5, 0x01, DIVU),
-        InstructionFormat::new_r_type(0b0110011, 0x6, 0x01, REM),
-        InstructionFormat::new_r_type(0b0110011, 0x7, 0x01, REMU),
+        InstructionFormat::new_i_type(0b0010011, 0x0, None, ADDI),
+        InstructionFormat::new_i_type(0b0010011, 0x4, None, XORI),
+        InstructionFormat::new_i_type(0b0010011, 0x6, None, ORI),
+        InstructionFormat::new_i_type(0b0010011, 0x7, None, ANDI),
+        InstructionFormat::new_i_type(0b0010011, 0x1, Some(|x| get_bits(x.imm, 5, 11) == 0x00), SLLI),
+        InstructionFormat::new_i_type(0b0010011, 0x5, Some(|x| get_bits(x.imm, 5, 11) == 0x00), SRLI),
+        InstructionFormat::new_i_type(0b0010011, 0x5, Some(|x| get_bits(x.imm, 5, 11) == 0x20), SRAI),
+        InstructionFormat::new_i_type(0b0010011, 0x2, None, SLTI),
+        InstructionFormat::new_i_type(0b0010011, 0x3, None, SLTIU),
 
-        InstructionFormat::new_i_type(0b0010011, 0x0, ADDI),
-        InstructionFormat::new_i_type(0b0010011, 0x4, XORI),
-        InstructionFormat::new_i_type(0b0010011, 0x6, ORI),
-        InstructionFormat::new_i_type(0b0010011, 0x7, ANDI),
-        InstructionFormat::new_i_type(0b0010011, 0x1, SLLI),
-        InstructionFormat::new_i_type(0b0010011, 0x5, SRLI),
-        InstructionFormat::new_i_type(0b0010011, 0x5, SRAI),
-        InstructionFormat::new_i_type(0b0010011, 0x2, SLTI),
-        InstructionFormat::new_i_type(0b0010011, 0x3, SLTIU),
-
-        InstructionFormat::new_i_type(0b0000011, 0x0, LB),
-        InstructionFormat::new_i_type(0b0000011, 0x1, LH),
-        InstructionFormat::new_i_type(0b0000011, 0x2, LW),
-        InstructionFormat::new_i_type(0b0000011, 0x4, LBU),
-        InstructionFormat::new_i_type(0b0000011, 0x5, LHU),
+        InstructionFormat::new_i_type(0b0000011, 0x0, None, LB),
+        InstructionFormat::new_i_type(0b0000011, 0x1, None, LH),
+        InstructionFormat::new_i_type(0b0000011, 0x2, None, LW),
+        InstructionFormat::new_i_type(0b0000011, 0x4, None, LBU),
+        InstructionFormat::new_i_type(0b0000011, 0x5, None, LHU),
 
         InstructionFormat::new_s_type(0b0100011, 0x0, SB),
         InstructionFormat::new_s_type(0b0100011, 0x1, SH),
@@ -54,14 +46,41 @@ lazy_static! {
         InstructionFormat::new_b_type(0b1100011, 0x6, BLTU),
         InstructionFormat::new_b_type(0b1100011, 0x7, BGEU),
 
-        InstructionFormat::new_j_type(0b1101111, JAL),
-        InstructionFormat::new_i_type(0b1100111, 0x0, JALR),
+        InstructionFormat::new_j_type(0b1101111,            JAL),
+        InstructionFormat::new_i_type(0b1100111, 0x0, None, JALR),
 
         InstructionFormat::new_u_type(0b0110111, LUI),
         InstructionFormat::new_u_type(0b0010111, AUIPC),
 
-        InstructionFormat::new_i_type(0b1110011, 0x0, ECALL),
-        InstructionFormat::new_i_type(0b1110011, 0x0, EBREAK)
+        InstructionFormat::new_i_type(0b1110011, 0x0, Some(|x| x.imm == 0x0), ECALL),
+        InstructionFormat::new_i_type(0b1110011, 0x0, Some(|x| x.imm == 0x1), EBREAK),
+
+        // RV64I Base Instruction Set
+        InstructionFormat::new_i_type(0b0000011, 0x6, None, LWU),
+        InstructionFormat::new_i_type(0b0000011, 0x3, None, LD),
+
+        InstructionFormat::new_s_type(0b0100011, 0x3, SD),
+        
+        InstructionFormat::new_i_type(0b0011011, 0x0, None, ADDIW),
+        InstructionFormat::new_i_type(0b0011011, 0x1, Some(|x| get_bits(x.imm, 5, 11) == 0x00), SLLIW),
+        InstructionFormat::new_i_type(0b0011011, 0x5, Some(|x| get_bits(x.imm, 5, 11) == 0x00), SRLIW),
+        InstructionFormat::new_i_type(0b0011011, 0x5, Some(|x| get_bits(x.imm, 5, 11) == 0x20), SRAIW),
+
+        InstructionFormat::new_r_type(0b0111011, 0x0, 0x00, ADDW),
+        InstructionFormat::new_r_type(0b0111011, 0x0, 0x20, SUBW),
+        InstructionFormat::new_r_type(0b0111011, 0x1, 0x00, SLLW),
+        InstructionFormat::new_r_type(0b0111011, 0x5, 0x00, SRLW),
+        InstructionFormat::new_r_type(0b0111011, 0x5, 0x20, SRAW),
+
+        // M - Multiplication and Division extension
+        InstructionFormat::new_r_type(0b0110011, 0x0, 0x01, MUL),
+        InstructionFormat::new_r_type(0b0110011, 0x1, 0x01, MULH),
+        InstructionFormat::new_r_type(0b0110011, 0x2, 0x01, MULSU),
+        InstructionFormat::new_r_type(0b0110011, 0x3, 0x01, MULU),
+        InstructionFormat::new_r_type(0b0110011, 0x4, 0x01, DIV),
+        InstructionFormat::new_r_type(0b0110011, 0x5, 0x01, DIVU),
+        InstructionFormat::new_r_type(0b0110011, 0x6, 0x01, REM),
+        InstructionFormat::new_r_type(0b0110011, 0x7, 0x01, REMU),
     ];
 }
 
@@ -76,7 +95,8 @@ pub enum InstructionFormat {
     IType {
         opcode: u32,
         funct3: u32,
-        make: fn(ITypeParams) -> Instruction
+        predicate: Option<fn(&ITypeParams) -> bool>,
+        make: fn(ITypeParams) -> Instruction,
     },
     SType {
         opcode: u32,

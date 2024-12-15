@@ -1,6 +1,6 @@
 use crate::util::get_bits;
 
-use super::format::{BTypeParams, ITypeParams, InstructionFormat, JTypeParams, RTypeParams, STypeParams, UTypeParams, INSTRUCTION_PATTERNS};
+use super::decode::{BTypeParams, ITypeParams, InstructionFormat, JTypeParams, RTypeParams, STypeParams, UTypeParams, INSTRUCTION_PATTERNS};
 
 
 #[derive(Debug, PartialEq, Eq)]
@@ -21,17 +21,12 @@ pub enum Instruction {
     SRA(RTypeParams),
     SLT(RTypeParams),
     SLTU(RTypeParams),
-    /**
-     * Muleiplication extension
-     */
-    MUL(RTypeParams),
-    MULH(RTypeParams),
-    MULSU(RTypeParams),
-    MULU(RTypeParams),
-    DIV(RTypeParams),
-    DIVU(RTypeParams),
-    REM(RTypeParams),
-    REMU(RTypeParams),
+
+    ADDW(RTypeParams),
+    SUBW(RTypeParams),
+    SLLW(RTypeParams),
+    SRLW(RTypeParams),
+    SRAW(RTypeParams),
 
     /**
      * Binary Operations with an Immediate operand
@@ -46,14 +41,21 @@ pub enum Instruction {
     SLTI(ITypeParams),
     SLTIU(ITypeParams),
 
+    ADDIW(ITypeParams),
+    SLLIW(ITypeParams),
+    SRLIW(ITypeParams),
+    SRAIW(ITypeParams),
+
     /**
      * Load from memory
      */
     LB(ITypeParams),
     LH(ITypeParams),
     LW(ITypeParams),
+    LD(ITypeParams),
     LBU(ITypeParams),
     LHU(ITypeParams),
+    LWU(ITypeParams),
 
     /**
      * Store to memory
@@ -61,6 +63,7 @@ pub enum Instruction {
     SB(STypeParams),
     SH(STypeParams),
     SW(STypeParams),
+    SD(STypeParams),
 
     /**
      * Branching
@@ -89,6 +92,18 @@ pub enum Instruction {
      */
     ECALL(ITypeParams),
     EBREAK(ITypeParams),
+
+    /**
+     * Multiplication extension
+     */
+    MUL(RTypeParams),
+    MULH(RTypeParams),
+    MULSU(RTypeParams),
+    MULU(RTypeParams),
+    DIV(RTypeParams),
+    DIVU(RTypeParams),
+    REM(RTypeParams),
+    REMU(RTypeParams),
 }
 
 impl Instruction {
@@ -105,10 +120,12 @@ impl Instruction {
                         return make(params);
                     }
                 },
-                InstructionFormat::IType { opcode, funct3, make } => {
+                InstructionFormat::IType { opcode, funct3, predicate, make } => {
                     if *opcode == inst_opcode && *funct3 == inst_funct3 {
                         let params = ITypeParams::from(inst);
-                        return make(params);
+                        if predicate.is_none_or(|x| x(&params)) {
+                            return make(params);
+                        }
                     }
                 },
                 InstructionFormat::SType { opcode, funct3, make } => {
@@ -139,5 +156,97 @@ impl Instruction {
         }
 
         Instruction::UNDEF
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::isa::{decode::{BTypeParams, ITypeParams, RTypeParams, STypeParams}, Instruction};
+
+    #[test]
+    pub fn it_decodes_add_and_sub_correctly() {
+        let inst = Instruction::decode(0b0000000_01100_00111_000_10101_0110011);
+        let expected = Instruction::ADD(RTypeParams {
+            rs1: 7,
+            rs2: 12,
+            rd: 21,
+        });
+        assert_eq!(inst, expected);
+
+        let inst = Instruction::decode(0b0000000_01100_00111_010_10101_0110011);
+        let expected = Instruction::ADD(RTypeParams {
+            rs1: 7,
+            rs2: 12,
+            rd: 21,
+        });
+        assert_ne!(inst, expected);
+
+        let inst = Instruction::decode(0b0100000_01100_00111_000_10101_0110011);
+        let expected = Instruction::SUB(RTypeParams {
+            rs1: 7,
+            rs2: 12,
+            rd: 21,
+        });
+        assert_eq!(inst, expected);
+    }
+
+    #[test]
+    pub fn it_decodes_srli_and_srai_correctly() {
+        let inst = Instruction::decode(0b0000000_01100_00111_101_10101_0010011);
+        let expected = Instruction::SRLI(ITypeParams {
+            rs1: 7,
+            rd: 21,
+            imm: 12
+        });
+        assert_eq!(inst, expected);
+
+        let inst = Instruction::decode(0b0100000_01100_00111_101_10101_0010011);
+        let expected = Instruction::SRAI(ITypeParams {
+            rs1: 7,
+            rd: 21,
+            imm: 1036,
+        });
+        assert_eq!(inst, expected);
+    }
+
+    #[test]
+    pub fn it_decodes_store_instrs_correctly() {
+        let inst = Instruction::decode(0b0100011_01100_00111_001_10101_0100011);
+        let expected = Instruction::SH(STypeParams {
+            rs1: 7,
+            rs2: 12,
+            imm: 1141,
+        });
+        assert_eq!(inst, expected);
+    }
+
+    #[test]
+    pub fn it_decodes_branch_instrs_correctly() {
+        let inst = Instruction::decode(0b0100011_01100_00111_000_10101_1100011);
+        let expected = Instruction::BEQ(BTypeParams {
+            rs1: 7,
+            rs2: 12,
+            imm: 1594,
+        });
+        assert_eq!(inst, expected);
+    }
+
+    #[test]
+    pub fn it_decodes_ecall_and_ebreak_correctly() {
+        let inst = Instruction::decode(0b0000000_00000_00111_000_10101_1110011);
+        let expected = Instruction::ECALL(ITypeParams {
+            rs1: 7,
+            rd: 21,
+            imm: 0,
+        });
+        assert_eq!(inst, expected);
+
+        let inst = Instruction::decode(0b0000000_00001_00111_000_10101_1110011);
+        let expected = Instruction::EBREAK(ITypeParams {
+            rs1: 7,
+            rd: 21,
+            imm: 1,
+        });
+        assert_eq!(inst, expected);
     }
 }
