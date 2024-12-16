@@ -2,7 +2,7 @@
 
 use crate::components::{bus::{DRAM_BASE, ROM_BASE, ROM_END}, cpu::{PrivilegeMode, Trap, Xlen}, Bus};
 
-use super::{address::Addressable, Size};
+use super::{address::Addressable, image::Imageable, Size};
 
 pub struct MMU {
     bus: Bus,
@@ -17,6 +17,10 @@ impl MMU {
             xlen: Xlen::Bit64,
             pmode: PrivilegeMode::Machine,
         }
+    }
+
+    pub fn load_dram_image(&mut self, image: Vec<u8>) {
+        self.bus.dram().load_image(image);
     }
 
     /// Updates the privilege mode of the MMU.

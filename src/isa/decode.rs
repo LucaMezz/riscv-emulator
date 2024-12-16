@@ -1,7 +1,7 @@
 use derive_new::new;
 use lazy_static::lazy_static;
 
-use crate::util::get_bits;
+use crate::util::{get_bits, sign_extend};
 
 use super::Instruction::{self, *};
 
@@ -23,9 +23,9 @@ lazy_static! {
         InstructionFormat::new_i_type(0b0010011, 0x4, None, XORI),
         InstructionFormat::new_i_type(0b0010011, 0x6, None, ORI),
         InstructionFormat::new_i_type(0b0010011, 0x7, None, ANDI),
-        InstructionFormat::new_i_type(0b0010011, 0x1, Some(|x| get_bits(x.imm, 5, 11) == 0x00), SLLI),
-        InstructionFormat::new_i_type(0b0010011, 0x5, Some(|x| get_bits(x.imm, 5, 11) == 0x00), SRLI),
-        InstructionFormat::new_i_type(0b0010011, 0x5, Some(|x| get_bits(x.imm, 5, 11) == 0x20), SRAI),
+        InstructionFormat::new_i_type(0b0010011, 0x1, Some(|x| get_bits(x.imm as u32, 5, 11) == 0x00), SLLI),
+        InstructionFormat::new_i_type(0b0010011, 0x5, Some(|x| get_bits(x.imm as u32, 5, 11) == 0x00), SRLI),
+        InstructionFormat::new_i_type(0b0010011, 0x5, Some(|x| get_bits(x.imm as u32, 5, 11) == 0x20), SRAI),
         InstructionFormat::new_i_type(0b0010011, 0x2, None, SLTI),
         InstructionFormat::new_i_type(0b0010011, 0x3, None, SLTIU),
 
@@ -62,9 +62,9 @@ lazy_static! {
         InstructionFormat::new_s_type(0b0100011, 0x3, SD),
         
         InstructionFormat::new_i_type(0b0011011, 0x0, None, ADDIW),
-        InstructionFormat::new_i_type(0b0011011, 0x1, Some(|x| get_bits(x.imm, 5, 11) == 0x00), SLLIW),
-        InstructionFormat::new_i_type(0b0011011, 0x5, Some(|x| get_bits(x.imm, 5, 11) == 0x00), SRLIW),
-        InstructionFormat::new_i_type(0b0011011, 0x5, Some(|x| get_bits(x.imm, 5, 11) == 0x20), SRAIW),
+        InstructionFormat::new_i_type(0b0011011, 0x1, Some(|x| get_bits(x.imm as u32, 5, 11) == 0x00), SLLIW),
+        InstructionFormat::new_i_type(0b0011011, 0x5, Some(|x| get_bits(x.imm as u32, 5, 11) == 0x00), SRLIW),
+        InstructionFormat::new_i_type(0b0011011, 0x5, Some(|x| get_bits(x.imm as u32, 5, 11) == 0x20), SRAIW),
 
         InstructionFormat::new_r_type(0b0111011, 0x0, 0x00, ADDW),
         InstructionFormat::new_r_type(0b0111011, 0x0, 0x20, SUBW),
@@ -139,7 +139,7 @@ impl RTypeParams {
 pub struct ITypeParams {
     pub rs1: u32,
     pub rd: u32,
-    pub imm: u32,
+    pub imm: i32,
 }
 
 impl ITypeParams {
@@ -147,7 +147,7 @@ impl ITypeParams {
         Self {
             rs1: get_bits(inst, 15, 19),
             rd: get_bits(inst, 7, 11),
-            imm: get_bits(inst, 20, 31),
+            imm: sign_extend(get_bits(inst, 20, 31), 12),
         }
     }
 }
