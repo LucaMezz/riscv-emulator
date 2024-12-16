@@ -249,4 +249,15 @@ mod tests {
         });
         assert_eq!(inst, expected);
     }
+
+    #[test]
+    pub fn it_decodes_correctly() {
+        let inst = Instruction::decode(0x00850793);
+        let expected = Instruction::ADDI(ITypeParams {
+            rs1: 10,
+            rd: 15,
+            imm: 8,
+        });
+        assert_eq!(inst, expected);
+    }
 }

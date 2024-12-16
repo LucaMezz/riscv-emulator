@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 
 /// Addressable trait provides functions to read / write bytes in a given 64-bit address space
 trait Addressable {

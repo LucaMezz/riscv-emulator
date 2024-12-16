@@ -1,4 +1,5 @@
 
+#[repr(u8)]
 pub enum Register {
     X0,  // zero
     X1,  // ra
@@ -116,27 +117,35 @@ impl From<usize> for Register {
     }
 }
 
-pub struct RegisterFile {
-    regs: Vec<u64>
+pub struct RegisterFile<T> {
+    regs: Vec<T>
 }
 
-impl RegisterFile {
+impl<T: Clone + Default> RegisterFile<T> {
     pub fn new() -> Self {
         RegisterFile { 
-            regs: vec![0; 31] 
+            regs: vec![T::default(); 31] 
         }
     }
 
-    pub fn write(&mut self, num: u8, data: u64) {
+    fn write_num(&mut self, num: u8, data: T) {
         assert!(num < 32);
         self.regs[num as usize] = data;
     }
 
-    pub fn read(&self, num: u8) -> u64 {
+    fn read_num(&self, num: u8) -> T {
         if num == 0 {
-            0
+            T::default()
         } else {
-            self.regs[num as usize]
+            self.regs[num as usize].clone()
         }
+    }
+
+    pub fn read(&mut self, reg: Register) {
+        self.read_num(reg as u8);
+    }
+
+    pub fn write(&mut self, reg: Register, data: T) {
+        self.write_num(reg as u8, data);
     }
 }
