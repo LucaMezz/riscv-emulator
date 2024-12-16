@@ -447,3 +447,8 @@ enum SegmentType {
     LoProc = 0x70000000,
     HiProc = 0x7fffffff,
 }
+
+#[cfg(test)]
+mod test {
+
+}

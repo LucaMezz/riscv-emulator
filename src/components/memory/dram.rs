@@ -2,7 +2,7 @@
 
 use crate::components::{bus::DRAM_BASE, cpu::Trap};
 
-use super::{address::Addressable, image::ImageStorage, Size};
+use super::{address::Addressable, image::Imageable, Size};
 
 #[derive(Debug)]
 pub struct DRAM {
@@ -65,7 +65,7 @@ impl Addressable for DRAM {
     }
 }
 
-impl ImageStorage for DRAM {
+impl Imageable for DRAM {
     fn load_image(&mut self, image: Vec<u8>) {
         self.code_len = image.len() as u64;
         self.dram.splice(..image.len(), image.iter().cloned());
@@ -75,14 +75,14 @@ impl ImageStorage for DRAM {
         self.load_image(vec![]);
     }
 
-    fn save_image(&self) {
+    fn save_image(&self) -> Vec<u8> {
         unimplemented!()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::components::memory::image::ImageStorage;
+    use crate::components::memory::image::Imageable;
     use crate::components::memory::{address::Addressable, Size};
     use crate::components::cpu::Trap;
 

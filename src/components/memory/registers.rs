@@ -149,3 +149,8 @@ impl<T: Clone + Default> RegisterFile<T> {
         self.write_num(reg as u8, data);
     }
 }
+
+#[cfg(test)]
+mod test {
+
+}

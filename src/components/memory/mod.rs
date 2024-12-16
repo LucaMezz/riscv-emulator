@@ -5,9 +5,9 @@ pub mod registers;
 pub mod dram;
 pub mod rom;
 
-pub use mmu::MMU;
-pub use registers::RegisterFile;
-pub use dram::DRAM;
+pub use self::mmu::MMU;
+pub use self::registers::RegisterFile;
+pub use self::dram::DRAM;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Size {

@@ -1,6 +1,6 @@
 use crate::components::{bus::{ROM_BASE, ROM_END}, cpu::Trap};
 
-use super::{address::Addressable, image::ImageStorage, Size};
+use super::{address::Addressable, image::Imageable, Size};
 
 pub const SIZE: usize = 0xf000;
 
@@ -51,7 +51,7 @@ impl Addressable for ROM {
     }
 }
 
-impl ImageStorage for ROM {
+impl Imageable for ROM {
     fn load_image(&mut self, image: Vec<u8>) {
         assert!(image.len() <= self.size() as usize);
         self.rom.splice(..image.len(), image.iter().cloned());
@@ -61,14 +61,14 @@ impl ImageStorage for ROM {
         self.load_image(vec![])
     }
 
-    fn save_image(&self) {
+    fn save_image(&self) -> Vec<u8> {
         unimplemented!()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::components::memory::image::ImageStorage;
+    use crate::components::memory::image::Imageable;
     use crate::components::memory::{address::Addressable, Size};
     use crate::components::cpu::Trap;
 

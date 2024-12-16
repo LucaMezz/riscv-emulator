@@ -22,20 +22,6 @@ impl Bus {
         }
     }
 
-    pub fn read(&self, addr: u64, size: Size) -> Result<u64, Trap> {
-        match addr {
-            ROM_BASE..ROM_END => self.rom.read(addr, size),
-            _ => self.dram.read(addr, size)
-        }
-    }
-
-    pub fn write(&mut self, addr: u64, size: Size, data: Vec<u8>) -> Result<(), Trap> {
-        match addr {
-            ROM_BASE..ROM_END => self.rom.write(addr, size, data),
-            _ => self.dram.write(addr, size, data),
-        }
-    }
-
     pub fn rom(&mut self) -> &mut ROM {
         &mut self.rom
     }
@@ -45,9 +31,33 @@ impl Bus {
     }
 }
 
+impl Addressable for Bus {
+    fn read(&self, addr: u64, size: Size) -> Result<u64, Trap> {
+        match addr {
+            ROM_BASE..ROM_END => self.rom.read(addr, size),
+            _ => self.dram.read(addr, size)
+        }
+    }
+
+    fn write(&mut self, addr: u64, size: Size, data: Vec<u8>) -> Result<(), Trap> {
+        match addr {
+            ROM_BASE..ROM_END => self.rom.write(addr, size, data),
+            _ => self.dram.write(addr, size, data),
+        }
+    }
+
+    fn size(&self) -> u64 {
+        2^64-1
+    }
+
+    fn contains(&self, addr: u64) -> bool {
+        self.rom.contains(addr) || self.dram.contains(addr)
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::components::{cpu::Trap, memory::Size};
+    use crate::components::{cpu::Trap, memory::{address::Addressable, Size}};
 
     use super::Bus;
 
