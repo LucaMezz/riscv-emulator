@@ -18,12 +18,8 @@ pub enum PrivilegeMode {
 	Machine
 }
 
-pub struct Trap {
-    pub kind: TrapKind,
-    pub value: u64,
-}
-
-pub enum TrapKind {
+#[derive(Debug, PartialEq, Eq)]
+pub enum Trap {
 	Breakpoint,
     EnvironmentCallFromMMode,
     EnvironmentCallFromSMode,
