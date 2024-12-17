@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 derive-new = "0.7.0"
 lazy_static = "1.5.0"
+num-traits = "0.2.19"
 num_enum = "0.7.3"

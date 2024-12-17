@@ -128,12 +128,12 @@ impl<T: Clone + Default> RegisterFile<T> {
         }
     }
 
-    fn write_num(&mut self, num: u8, data: T) {
+    pub fn write_num(&mut self, num: u8, data: T) {
         assert!(num < 32);
         self.regs[num as usize] = data;
     }
 
-    fn read_num(&self, num: u8) -> T {
+    pub fn read_num(&self, num: u8) -> T {
         if num == 0 {
             T::default()
         } else {
@@ -141,8 +141,8 @@ impl<T: Clone + Default> RegisterFile<T> {
         }
     }
 
-    pub fn read(&mut self, reg: Register) {
-        self.read_num(reg as u8);
+    pub fn read(&mut self, reg: Register) -> T {
+        self.read_num(reg as u8)
     }
 
     pub fn write(&mut self, reg: Register, data: T) {

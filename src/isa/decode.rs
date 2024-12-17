@@ -1,7 +1,7 @@
 use derive_new::new;
 use lazy_static::lazy_static;
 
-use crate::util::{get_bits, sign_extend};
+use crate::util::{get_bits, sign_extend_32};
 
 use super::Instruction::{self, *};
 
@@ -118,45 +118,45 @@ pub enum InstructionFormat {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct RTypeParams {
-    pub rs1: u32,
-    pub rs2: u32,
-    pub rd: u32,
+    pub rs1: u8,
+    pub rs2: u8,
+    pub rd: u8,
 }
 
 impl RTypeParams {
     pub fn from(inst: u32) -> Self {
         Self {
-            rs1: get_bits(inst, 15, 19),
-            rs2: get_bits(inst, 20, 24),
-            rd: get_bits(inst, 7, 11),
+            rs1: get_bits::<u32>(inst, 15, 19) as u8,
+            rs2: get_bits::<u32>(inst, 20, 24) as u8,
+            rd: get_bits::<u32>(inst, 7, 11) as u8,
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ITypeParams {
-    pub rs1: u32,
-    pub rd: u32,
+    pub rs1: u8,
+    pub rd: u8,
     pub imm: i32,
 }
 
 impl ITypeParams {
     pub fn from(inst: u32) -> Self {
         Self {
-            rs1: get_bits(inst, 15, 19),
-            rd: get_bits(inst, 7, 11),
-            imm: sign_extend(get_bits(inst, 20, 31), 12),
+            rs1: get_bits::<u32>(inst, 15, 19) as u8,
+            rd: get_bits::<u32>(inst, 7, 11) as u8,
+            imm: sign_extend_32(get_bits(inst, 20, 31), 12),
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct STypeParams {
-    pub rs1: u32,
-    pub rs2: u32,
-    pub imm: u32,
+    pub rs1: u8,
+    pub rs2: u8,
+    pub imm: i32,
 }
 
 impl STypeParams {
@@ -165,17 +165,17 @@ impl STypeParams {
         let imm2 = get_bits(inst, 25, 31);
         
         Self {
-            rs1: get_bits(inst, 15, 19),
-            rs2: get_bits(inst, 20, 24),
-            imm: (imm2 << 5) | imm1
+            rs1: get_bits::<u32>(inst, 15, 19) as u8,
+            rs2: get_bits::<u32>(inst, 20, 24) as u8,
+            imm: sign_extend_32((imm2 << 5) | imm1, 12),
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct BTypeParams {
-    pub rs1: u32,
-    pub rs2: u32,
+    pub rs1: u8,
+    pub rs2: u8,
     pub imm: u32,
 }
 
@@ -187,36 +187,47 @@ impl BTypeParams {
         let imm4 = get_bits(inst, 31, 31);
 
         Self {
-            rs1: get_bits(inst, 15, 19),
-            rs2: get_bits(inst, 20, 24),
+            rs1: get_bits::<u32>(inst, 15, 19) as u8,
+            rs2: get_bits::<u32>(inst, 20, 24) as u8,
             imm: (imm4 << 11) | (imm3 << 10) | (imm2 << 4) | imm1
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct JTypeParams {
-    pub rd: u32,
-    pub imm: u32,
+    pub rd: u8,
+    pub imm: i32,
 }
 
 impl JTypeParams {
-    pub fn from(_inst: u32) -> Self {
-        unimplemented!()
+    pub fn from(inst: u32) -> Self {
+        let imm1 = get_bits(inst, 21, 30);
+        let imm2 = get_bits(inst, 20, 20);
+        let imm3 = get_bits(inst, 12, 19);
+        let imm4 = get_bits(inst, 31, 31);
+
+        Self {
+            rd: get_bits::<u32>(inst, 7, 11) as u8,
+            imm: sign_extend_32(
+                (imm4 << 20) | (imm3 << 12) | (imm2 << 11) | (imm1 << 1),
+                 20
+            )
+        }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct UTypeParams {
-    pub rd: u32,
-    pub imm: u32,
+    pub rd: u8,
+    pub imm: i32,
 }
 
 impl UTypeParams {
     pub fn from(inst: u32) -> Self {
         Self {
-            rd: get_bits(inst, 7, 11),
-            imm: get_bits(inst, 12, 31)
+            rd: get_bits::<u32>(inst, 7, 11) as u8,
+            imm: get_bits::<u32>(inst, 12, 31) as i32
         }
     }
 }

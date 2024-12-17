@@ -9,7 +9,8 @@ pub use self::mmu::MMU;
 pub use self::registers::RegisterFile;
 pub use self::dram::DRAM;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(usize)]
 pub enum Size {
     Byte = 1,
     HalfWord = 2,
