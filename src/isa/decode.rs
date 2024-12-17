@@ -81,6 +81,7 @@ lazy_static! {
         InstructionFormat::new_r_type(0b0110011, 0x5, 0x01, DIVU),
         InstructionFormat::new_r_type(0b0110011, 0x6, 0x01, REM),
         InstructionFormat::new_r_type(0b0110011, 0x7, 0x01, REMU),
+        InstructionFormat::new_r_type(0b0111011, 0x0, 0x01, MULW),
     ];
 }
 

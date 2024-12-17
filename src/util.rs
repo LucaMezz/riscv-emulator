@@ -21,5 +21,16 @@ pub fn sign_extend_64(value: u64, bit_width: u8) -> i64 {
 }
 
 pub fn unsigned_32(value: u64) -> u64 {
-    value & 0x0000_0000_ffff_ffff
+    get_bits(value, 0, 31)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::util::unsigned_32;
+
+    #[test]
+    fn it_finds_unsigned_32_correctly() {
+        let num: u64 = 0x82a7_28e5_c984_d1f4;
+        assert_eq!(unsigned_32(num), 0xc984_d1f4);
+    }
 }

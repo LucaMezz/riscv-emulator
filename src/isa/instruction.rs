@@ -104,6 +104,12 @@ pub enum Instruction {
     DIVU(RTypeParams),
     REM(RTypeParams),
     REMU(RTypeParams),
+    
+    MULW(RTypeParams),
+    DIVW(RTypeParams),
+    DIVWU(RTypeParams),
+    REMW(RTypeParams),
+    REMWU(RTypeParams),
 }
 
 impl Instruction {

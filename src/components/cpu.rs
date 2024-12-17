@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_variables)]
 
-use crate::{isa::Instruction, util::{sign_extend_64, unsigned_32}};
+use crate::{isa::Instruction, util::{get_bits, sign_extend_64, unsigned_32}};
 
 use super::{bus::DRAM_BASE, memory::{registers::Register::*, RegisterFile, Size, MMU}};
 
@@ -206,18 +206,47 @@ impl CPU {
                 self.xregs.write_num(params.rd, a * b);
                 Ok(())
             },
-            SLL(params) |
-            SRL(params) |
-            SRA(params) |
-            SLT(params) |
-            SLTU(params) => unimplemented!(),
+            SLL(params) => {
+                let a = self.xregs.read_num(params.rs1);
+                let b = self.xregs.read_num(params.rs2);
+                self.xregs.write_num(params.rd, a << b);
+                Ok(())
+            },
+            SRL(params) => {
+                let a = self.xregs.read_num(params.rs1);
+                let b = self.xregs.read_num(params.rs2);
+                self.xregs.write_num(params.rd, a >> b);
+                Ok(())
+            },
+            SRA(params) => {
+                let a = self.xregs.read_num(params.rs1) as i64;
+                let b = self.xregs.read_num(params.rs2) as i64;
+                self.xregs.write_num(params.rd, (a >> b) as u64);
+                Ok(())
+            },
+            SLT(params) => {
+                let a = self.xregs.read_num(params.rs1);
+                let b = self.xregs.read_num(params.rs2);
+                let result = ((a as i64) < (b as i64)) as u64;
+                assert!(result == 0 || result == 1);
+                self.xregs.write_num(params.rd, result);
+                Ok(())
+            },
+            SLTU(params) => {
+                let a = self.xregs.read_num(params.rs1);
+                let b = self.xregs.read_num(params.rs2);
+                let result = (a < b) as u64;
+                assert!(result == 0 || result == 1);
+                self.xregs.write_num(params.rd, result);
+                Ok(())
+            },
             ADDW(params) => {
                 let a = self.xregs.read_num(params.rs1);
                 let b = self.xregs.read_num(params.rs2);
                 self.xregs.write_num(
                     params.rd, 
-                    (sign_extend_64(a, 32) + 
-                     sign_extend_64(b, 32)) as u64
+                    (sign_extend_64(unsigned_32(a), 32) + 
+                     sign_extend_64(unsigned_32(b), 32)) as u64
                 );
                 Ok(())
             },
@@ -226,8 +255,8 @@ impl CPU {
                 let b = self.xregs.read_num(params.rs2);
                 self.xregs.write_num(
                     params.rd, 
-                    (sign_extend_64(a, 32) - 
-                     sign_extend_64(b, 32)) as u64
+                    (sign_extend_64(unsigned_32(a), 32) - 
+                     sign_extend_64(unsigned_32(b), 32)) as u64
                 );
                 Ok(())
             },
@@ -236,12 +265,33 @@ impl CPU {
                 let b = self.xregs.read_num(params.rs2);
                 self.xregs.write_num(
                     params.rd, 
-                    sign_extend_64(unsigned_32(a) << b, 32) as u64
+                    (sign_extend_64(unsigned_32(a), 32) << 
+                     sign_extend_64(unsigned_32(b), 32)) as u64
                 );
                 Ok(())
             }
-            SRLW(params) |
-            SRAW(params) => unimplemented!(),
+            SRLW(params) => {
+                let a = self.xregs.read_num(params.rs1);
+                let b = self.xregs.read_num(params.rs2);
+                self.xregs.write_num(
+                    params.rd, 
+                    (sign_extend_64(unsigned_32(a), 32) >> 
+                     sign_extend_64(unsigned_32(b), 32)) as u64
+                );
+                Ok(())
+            },
+            SRAW(params) => {
+                let a = self.xregs.read_num(params.rs1);
+                let b = self.xregs.read_num(params.rs2);
+                self.xregs.write_num(
+                    params.rd, 
+                    sign_extend_64(
+                        (unsigned_32(a) as i64 >> b as i64) as u64, 
+                        32
+                    ) as u64
+                );
+                Ok(())
+            },
 
             /*
              * Binary Operations with an Immediate operand
@@ -271,15 +321,42 @@ impl CPU {
                 self.xregs.write_num(params.rd, result);
                 Ok(())
             },
-            SLLI(params) => unimplemented!(),
-            SRLI(params) => unimplemented!(),
-            SRAI(params) => unimplemented!(),
-            SLTI(params) => unimplemented!(),
-            SLTIU(params) => unimplemented!(),
+            SLLI(params) => {
+                let result = self.xregs
+                    .read_num(params.rs1) << get_bits(params.imm, 0, 4);
+                self.xregs.write_num(params.rd, result);
+                Ok(())
+            },
+            SRLI(params) => {
+                let result = self.xregs
+                    .read_num(params.rs1) >> get_bits(params.imm, 0, 4);
+                self.xregs.write_num(params.rd, result);
+                Ok(())
+            },
+            SRAI(params) => {
+                let result = self.xregs
+                    .read_num(params.rs1) as i64 >> get_bits(params.imm, 0, 4) as i64;
+                self.xregs.write_num(params.rd, result as u64);
+                Ok(())
+            },
+            SLTI(params) => {
+                let a = self.xregs.read_num(params.rs1);
+                let result = ((a as i64) < (params.imm as i64)) as u64;
+                assert!(result == 0 || result == 1);
+                self.xregs.write_num(params.rd, result);
+                Ok(())
+            },
+            SLTIU(params) => {
+                let a = self.xregs.read_num(params.rs1);
+                let result = (a < params.imm as u64) as u64;
+                assert!(result == 0 || result == 1);
+                self.xregs.write_num(params.rd, result);
+                Ok(())
+            },
 
             ADDIW(params) => {
-                let result = self.xregs
-                    .read_num(params.rs1)
+                let result = unsigned_32(self.xregs
+                    .read_num(params.rs1))
                     .wrapping_add(params.imm as u64);
                 self.xregs.write_num(params.rd, result);
                 Ok(())
@@ -293,8 +370,24 @@ impl CPU {
                 );
                 Ok(())
             },
-            SRLIW(params) => unimplemented!(),
-            SRAIW(params) => unimplemented!(),
+            SRLIW(params) => {
+                let result = unsigned_32(self.xregs
+                    .read_num(params.rs1)) >> params.imm as u64;
+                self.xregs.write_num(
+                    params.rd, 
+                    sign_extend_64(result, 32) as u64
+                );
+                Ok(())
+            },
+            SRAIW(params) => {
+                let result = sign_extend_64(unsigned_32(self.xregs
+                    .read_num(params.rs1)), 32) as i64 >> (params.imm as i64);
+                self.xregs.write_num(
+                    params.rd, 
+                    result as u64,
+                );
+                Ok(())
+            },
 
             /*
              * Load from memory
@@ -369,13 +462,23 @@ impl CPU {
                     { self.pc = self.pc + params.imm as u64 };
                 Ok(())
             },
-            BLT(params) |
+            BLT(params) => {
+                if (self.xregs.read_num(params.rs1) as i64) 
+                    < (self.xregs.read_num(params.rs2) as i64)
+                    { self.pc = self.pc + params.imm as u64 };
+                Ok(())
+            },
             BLTU(params) => {
                 if self.xregs.read_num(params.rs1) < self.xregs.read_num(params.rs2)
                     { self.pc = self.pc + params.imm as u64 };
                 Ok(())
             },
-            BGE(params) | 
+            BGE(params) => {
+                if (self.xregs.read_num(params.rs1) as i64) 
+                    >= (self.xregs.read_num(params.rs2) as i64)
+                    { self.pc = self.pc + params.imm as u64 };
+                Ok(())
+            }
             BGEU(params) => {
                 if self.xregs.read_num(params.rs1) >= self.xregs.read_num(params.rs2)
                    { self.pc = self.pc + params.imm as u64 };
@@ -403,11 +506,11 @@ impl CPU {
              * Upper immediates
              */
             LUI(params) => {
-                self.xregs.write_num(params.rd, (params.imm << 12) as u64);
+                self.xregs.write_num(params.rd, (params.imm as u64) << 12);
                 Ok(())
             },
             AUIPC(params) => {
-                self.incr_pc((params.imm << 12) as u64);
+                self.incr_pc((params.imm as u64) << 12);
                 Ok(())
             },
 
@@ -433,11 +536,107 @@ impl CPU {
             DIVU(params) => unimplemented!(),
             REM(params) => unimplemented!(),
             REMU(params) => unimplemented!(),
+            MULW(rtype_params) => unimplemented!(),
+            DIVW(rtype_params) => unimplemented!(),
+            DIVWU(rtype_params) => unimplemented!(),
+            REMW(rtype_params) => unimplemented!(),
+            REMWU(rtype_params) => unimplemented!(),
         };
     }
 }
 
 #[cfg(test)]
 mod test {
+    use num_traits::pow;
 
+    use crate::{components::memory::registers::Register, isa::{decode::{ITypeParams, RTypeParams}, Instruction}};
+
+    use super::CPU;
+
+    
+    #[test]
+    pub fn it_executes_slt_and_sltu_correctly() {
+        let mut cpu = CPU::new();
+        let a: i64 = -707;
+        let b: i64 = 578;
+        cpu.xregs.write(Register::X10, a as u64);
+        cpu.xregs.write(Register::X11, b as u64);
+        let inst = Instruction::SLT(RTypeParams {
+            rs1: Register::X10 as u8,
+            rs2: Register::X11 as u8,
+            rd: Register::X12 as u8,
+        });
+        let result = cpu.execute(inst);
+        assert!(result.is_ok());
+        let read = cpu.xregs.read(Register::X12);
+        assert_eq!(read, true as u64);
+
+        let inst2 = Instruction::SLTU(RTypeParams {
+            rs1: Register::X10 as u8,
+            rs2: Register::X11 as u8,
+            rd: Register::X12 as u8,
+        });
+        let result2 = cpu.execute(inst2);
+        assert!(result2.is_ok());
+        let read2 = cpu.xregs.read(Register::X12);
+        assert_eq!(read2, false as u64);
+    }
+
+    #[test]
+    pub fn it_executes_word_instrs_correctly() {
+        let mut cpu = CPU::new();
+        let a: i32 = -1784;
+        let b: i32 = -4392;
+        let au: u32 = a as u32;
+        let bu: u32 = b as u32;
+        cpu.xregs.write(Register::X10, au as u64);
+        cpu.xregs.write(Register::X11, bu as u64);
+        let inst = Instruction::ADDW(RTypeParams {
+            rs1: Register::X10 as u8,
+            rs2: Register::X11 as u8,
+            rd: Register::X12 as u8,
+        });
+        let result = cpu.execute(inst);
+        assert!(result.is_ok());
+        let read = cpu.xregs.read(Register::X12);
+        assert_eq!(read, (a + b) as u64);
+
+        let c = 5780;
+        let d: i64 = pow(2, 48) + c;
+        let e: i64 = -19384;
+        cpu.xregs.write(Register::X10, d as u64);
+        cpu.xregs.write(Register::X11, e as u64);
+        let inst = Instruction::ADDW(RTypeParams {
+            rs1: Register::X10 as u8,
+            rs2: Register::X11 as u8,
+            rd: Register::X12 as u8,
+        });
+        let result = cpu.execute(inst);
+        assert!(result.is_ok());
+        let read = cpu.xregs.read(Register::X12);
+        assert_eq!(read, !13604 + 1);
+
+        let inst = Instruction::ADDIW(ITypeParams {
+            rs1: Register::X10 as u8,
+            imm: e as i32,
+            rd: Register::X12 as u8,
+        });
+        let result = cpu.execute(inst);
+        assert!(result.is_ok());
+        let read = cpu.xregs.read(Register::X12);
+        assert_eq!(read, !13604 + 1);
+        
+        let f: i64 = -100;
+        let imm: i64 = 5;
+        cpu.xregs.write(Register::X10, f as u64);
+        let inst = Instruction::SRAIW(ITypeParams {
+            rs1: Register::X10 as u8,
+            imm: imm as i32,
+            rd: Register::X12 as u8,
+        });
+        let result = cpu.execute(inst);
+        assert!(result.is_ok());
+        let read = cpu.xregs.read(Register::X12);
+        assert_eq!(read, (f >> imm) as u64);
+    }
 }
